@@ -1,6 +1,8 @@
 from pulp import *
 import pandas as pd
 import argparse
+from visualizer import draw_network
+
 
 def load_data(filepath):
     df = pd.read_csv(filepath)
@@ -45,14 +47,20 @@ def solve(warehouses, stores, costs):
             value = x[(s,m)].value()
             if value > 0:
                 print(f"{s} ->{m}: {value} пицц")
+    
+    results = []
+    for s in warehouses:
+        for m in stores:
+            value = x[(s, m)].value()
+            if value > 0:
+                results.append((s, m, value))
+    
+    return results, problem.objective.value()
 
-    print(f"Общая стоимость: {problem.objective.value()}")
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--data", type=str, default="data/example.csv")
-args = parser.parse_args()
-
-warehouses, stores, costs = load_data(args.data)
-
-solve(warehouses, stores, costs)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", type=str, default="data/example.csv")
+    args = parser.parse_args()
+    warehouses, stores, costs = load_data(args.data)
+    results, total_cost = solve(warehouses, stores, costs)
