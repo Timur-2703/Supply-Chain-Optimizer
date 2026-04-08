@@ -1,46 +1,44 @@
+import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-def draw_network(warehouses, stores, results, total_cost):
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+def draw_network(warehouses, stores, results, costs):
+    G = nx.DiGraph()  # направленный граф
     
-    # Позиции складов (слева) и магазинов (справа)
-    w_list = list(warehouses.keys())
-    s_list = list(stores.keys())
+    # добавляем узлы
+    for w in warehouses:
+        G.add_node(w.name, type="warehouse")
+    for s in stores:
+        G.add_node(s.name, type="store")
     
-    # Рисуем склады слева
-    for i, w in enumerate(w_list):
-        y = i * 2
-        ax.plot(0, y, 's', color='#E94560', markersize=20)
-        ax.text(-0.5, y, f"{w}\n({warehouses[w]})", ha='right', va='center', fontsize=10)
+    # добавляем рёбра только для активных маршрутов
+    for from_node, to_node, amount in results:
+        G.add_edge(from_node, to_node, weight=amount)
     
-    # Рисуем магазины справа
-    for i, s in enumerate(s_list):
-        y = i * 1.5
-        ax.plot(4, y, 'o', color='#1D9E75', markersize=20)
-        ax.text(4.5, y, f"{s}\n({stores[s]})", ha='left', va='center', fontsize=10)
+    # позиции — склады слева, магазины справа
+    pos = {}
+    for i, w in enumerate(warehouses):
+        pos[w.name] = (0, i)
+    for i, s in enumerate(stores):
+        pos[s.name] = (2, i)
     
-    # Рисуем потоки (стрелки)
-    for src, dst, amount in results:
-        w_y = w_list.index(src) * 2
-        s_y = s_list.index(dst) * 1.5
-        thickness = amount / 20  # толщина линии зависит от количества
-        ax.annotate("", xy=(3.8, s_y), xytext=(0.2, w_y),
-                    arrowprops=dict(arrowstyle='->', lw=thickness, color='#378ADD', alpha=0.7))
-        # Подпись количества
-        mid_x = 2
-        mid_y = (w_y + s_y) / 2
-        ax.text(mid_x, mid_y, f"{amount:.0f}", ha='center', va='bottom', fontsize=9, color='#378ADD')
+    plt.figure(figsize=(14, 8))
     
-    ax.set_xlim(-2, 6)
-    ax.set_title(f"Supply Chain Optimization (Total cost: {total_cost:.0f})", fontsize=14)
-    ax.axis('off')
+    # рисуем склады синим, магазины зелёным
+    warehouse_nodes = [w.name for w in warehouses]
+    store_nodes = [s.name for s in stores]
     
-    # Легенда
-    w_patch = mpatches.Patch(color='#E94560', label='Warehouses')
-    s_patch = mpatches.Patch(color='#1D9E75', label='Stores')
-    ax.legend(handles=[w_patch, s_patch], loc='upper center')
+    nx.draw_networkx_nodes(G, pos, nodelist=warehouse_nodes, 
+                           node_color="blue", node_size=3000)
+    nx.draw_networkx_nodes(G, pos, nodelist=store_nodes, 
+                           node_color="green", node_size=3000)
+    nx.draw_networkx_labels(G, pos, font_color="white")
+    nx.draw_networkx_edges(G, pos, arrows=True, arrowsize=20)
     
+    # подписи на рёбрах — количество
+    edge_labels = {(f, t): f"{a:.0f}" for f, t, a in results}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    
+    plt.title("Оптимальные поставки")
+    plt.axis("off")
     plt.tight_layout()
-    plt.savefig("network.png", dpi=150)
     plt.show()
